@@ -24,21 +24,63 @@
 \def\nilstr{\varepsilon}
 \newcommand\XOR{\mathbin{\char`\^}}
 
-\usepackage{hyperref}
+\usepackage[hidelinks]{hyperref}
 \hypersetup{
-    colorlinks=true,
-    linkcolor=black,
-    filecolor=magenta,      
-    urlcolor=cyan,
+    colorlinks,
+    linkcolor={red!50!black},
+    citecolor={blue!50!black},
+    urlcolor={blue!80!black}
+}
+
+\lstset{
+  mathescape,
+  frame=tb,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\ttfamily\small},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=3
+}
+
+\colorlet{punct}{red!60!black}
+\definecolor{background}{HTML}{EEEEEE}
+\definecolor{delim}{RGB}{20,105,176}
+\colorlet{numb}{magenta!60!black}
+\lstdefinelanguage{json}{
+    basicstyle=\normalfont\ttfamily,
+    numbers=left,
+    numberstyle=\scriptsize,
+    stepnumber=1,
+    numbersep=8pt,
+    showstringspaces=false,
+    breaklines=true,
+    frame=lines,
+    backgroundcolor=\color{background},
+    literate=
+     *{:}{{{\color{punct}{:}}}}{1}
+      {,}{{{\color{punct}{,}}}}{1}
+      {\{}{{{\color{delim}{\{}}}}{1}
+      {\}}{{{\color{delim}{\}}}}}{1}
+      {[}{{{\color{delim}{[}}}}{1}
+      {]}{{{\color{delim}{]}}}}{1},
 }
 
 \author{Kaiyu Zheng}
+\date{September 2, 2016\footnote{Update on April 8th, 2019 (added information on \texttt{amcl})}}
 \title{ROS Navigation Tuning Guide}
 
 \begin{document}
 \maketitle
 
-\section*{Introduction}
+\section*{Abstract}
 The ROS navigation stack is powerful for mobile robots to move from place to place reliably. The job of navigation stack is to produce a safe path for the robot to execute, by processing data from odometry, sensors and environment map. Maximizing the performance of this navigation stack requires some fine tuning of parameters, and this is not as simple as it looks. One who is sophomoric about the concepts and reasoning may try things randomly, and wastes a lot of time.
 
 This article intends to guide the reader through the process of fine tuning navigation parameters. It is the reference when someone need to know the "how" and "why" when setting the value of key parameters. This guide assumes that the reader has already set up the navigation stack and ready to optimize it. This is also a summary of my work with the ROS navigation stack.\\
@@ -88,7 +130,7 @@ takes in odometry messages ("odom" topic) and outputs velocity commands ("cmd\_v
 Usually you can refer to your mobile base's manual. For example, SCITOS G5 has maximum velocity 1.4 m$/$s\footnote{This information is obtained from \href{http://www.metralabs.com/en/research}{MetraLabs's website}.}. In ROS, you can also subscribe to the \texttt{odom} topic to obtain the current odometry information. If you can control your robot manually (e.g. with a joystick), you can try to run it forward until its
 speed reaches constant, and then echo the odometry data.
 
-\textit{Translational velocity} ($m/s$) is the velocity when robot is moving in a straight line. Its max value is the same as the maximum velocity we obtained above. \textit{Rotational velocity} ($rad/s$) is equivalent as angular velocity; its maximum value is the angular velocity of the robot when it is rotating in place. To obtain maximum rotational velocity, we can rotate the robot 360 degrees after the robot's speed reaches constant, and time this movement. Another method is to measure the radius of the circumscribed circle of robot's footprint, then compute the maximum angular velocity by $\omega_{max}=v_{max}/r$.
+\textit{Translational velocity} ($m/s$) is the velocity when robot is moving in a straight line. Its max value is the same as the maximum velocity we obtained above. \textit{Rotational velocity} ($rad/s$) is equivalent as angular velocity; its maximum value is the angular velocity of the robot when it is rotating in place. To obtain maximum rotational velocity, we can control the robot by a joystick and rotate the robot 360 degrees after the robot's speed reaches constant, and time this movement. %Another method is to measure the radius of the circumscribed circle of robot's footprint, then compute the maximum angular velocity by $\omega_{max}=v_{max}/r$.
 
 For safety, we prefer to set maximum translational and rotational velocities to be lower than their actual maximum values.
 
@@ -131,9 +173,7 @@ This is the simplest one. It checks if the given goal is an obstacle, and if so 
 \texttt{navfn} uses Dijkstra's algorithm to find a global path with minimum cost between start point and
 end point. \texttt{global$\_$planner} is built as a more flexible replacement of \texttt{navfn} with more options. These
 options include (1) support for A$*$, (2) toggling quadratic approximation, (3) toggling grid path. Both \texttt{navfn} and
-global planner are based on this paper:
-
-\footnotesize{\url{http://cs.stanford.edu/group/manips/publications/pdfs/Brock_1999_ICRA.pdf}}
+global planner are based on the work by \cite{brock1999high}:
 
 \subsection{Global Planner Parameters}
 \normalsize
@@ -256,7 +296,7 @@ See next page.
 \end{minipage}}
 \end{center}
 
-\noindent DWA is proposed by Dieter Fox et. al. in the paper \href{https://www.ri.cmu.edu/pub_files/pub1/fox_dieter_1997_1/fox_dieter_1997_1.pdf}{\textit{The Dynamic Window Approach to Collision Avoidance}}. According to this paper, the goal of DWA is to produce a $(v,\omega)$ pair which
+\noindent DWA is proposed by \cite{fox1997dynamic}. According to this paper, the goal of DWA is to produce a $(v,\omega)$ pair which
 represents a circular trajectory that is optimal for robot's local condition. DWA reaches this goal by searching the velocity space in the next time interval.
 The velocities in this space are restricted to be admissible, which means the robot must be able to stop before reaching the closest obstacle on the
 circular trajectory dictated by these admissible velocities. Also, DWA will only consider velocities within a dynamic window, which is defined to be the
@@ -317,9 +357,13 @@ components: progress to goal, clearance from obstacles and forward velocity. In 
 \end{eqnarray*}
 
 \normalsize
-\noindent The objective is to get the lowest cost. \texttt{path\_distance\_bias} is the weight for how much the local planner should stay close to the global path \footnote{from Robot Operating System (ROS): The Complete Reference, Volume 1, p.91}. A high value will make the local planner prefer trajectories
-on global path. \noindent \texttt{goal\_distance\_bias} is the weight for how much the robot should attempt to reach the local goal, with whatever path. Experiments show that increasing \texttt{goal\_distance\_bias}
-enables the robot to be less attached to the global path. \texttt{occdist\_scale} is the weight for how much the robot should attempt to avoid obstacles. A high value for this
+\noindent The objective is to get the lowest cost. \texttt{path\_distance\_bias} is the weight for how much the local planner should stay close to the global path \cite{furrer2016robot}. A high value will make the local planner prefer trajectories
+on global path. 
+
+\texttt{goal\_distance\_bias} is the weight for how much the robot should attempt to reach the local goal, with whatever path. Experiments show that increasing this
+parameter enables the robot to be less attached to the global path.
+
+\texttt{occdist\_scale} is the weight for how much the robot should attempt to avoid obstacles. A high value for this
 parameter results in indecisive robot that stucks in place. Currently for SCITOS G5, we set \texttt{path\_distance\_bias} to 32.0, \texttt{goal\_distance\_bias} to 20.0, \texttt{occdist\_scale} to 0.02. They work well in simulation.
 
 \newpage
@@ -367,7 +411,7 @@ Inflation layer is consisted of cells with cost ranging from 0 to 255. Each cell
 
 \texttt{inflation\_radius} and \texttt{cost\_scaling\_factor} are the parameters that determine the inflation. \texttt{inflation\_radius} controls how far away the zero cost point is from the obstacle. \texttt{cost\_scaling\_factor} is inversely proportional to the cost of a cell. Setting it higher will make the decay curve more steep.
 
-Dr. Pronobis sugggests the optimal costmap decay curve is one that has relatively low slope, so that the best path is as far as possible from the obstacles on each side. The advantage is that the robot would prefer to move in the middle of obstacles.  As shown in Figure 8 and 9, with the same starting point and goal, when costmap curve is steep, the robot tends to be close to obstacles. In Figure 14, \texttt{inflation\_radius} = 0.55, \texttt{cost\_scaling\_factor} = 5.0; In Figure 15, \texttt{inflation\_radius} = 1.75, \texttt{cost\_scaling\_\\factor} = 2.58
+Dr. Pronobis sugggests the optimal costmap decay curve is one that has relatively low slope, so that the best path is as far as possible from the obstacles on each side. The advantage is that the robot would prefer to move in the middle of obstacles.  As shown in Figure 8 and 9, with the same starting point and goal, when costmap curve is steep, the robot tends to be close to obstacles. In Figure 14, \texttt{inflation\_radius} = 0.55, \texttt{cost\_scaling\_factor} = 5.0; In Figure 15, \texttt{inflation\_radius} = 1.75, \texttt{cost\_scaling\_factor} = 2.58
 
 \begin{figure}[!htb]
 \minipage{0.49\textwidth}
@@ -471,9 +515,147 @@ Besides, \texttt{z\_resolution} controls how dense the voxels is on the $z$-axis
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{AMCL}
 
-\texttt{amcl} is a ROS package that deals with robot localization. It is the abbreviation of Adaptive Monte Carlo Localization, also known as partical filter localization. This localization technique works like this: Each sample stores a position and orientation data representing the robot's pose. Particles are all sampled randomly initially. When the robot moves, particles are resampled based on their current state as well as robot's action using recursive Bayesian estimation.
+\texttt{amcl} is a ROS package that deals with robot localization. It is the abbreviation of Adaptive Monte Carlo Localization (AMCL), also known as partical filter localization. This localization technique works like this: Each sample stores a position and orientation data representing the robot's pose. Particles are all sampled randomly initially. When the robot moves, particles are resampled based on their current state as well as robot's action using recursive Bayesian estimation.
 
-More discussion on AMCL parameter tuning will be provided later. Please refer to \url{http://wiki.ros.org/amcl} for more information.
+More discussion on AMCL parameter tuning will be provided later. Please refer to \url{http://wiki.ros.org/amcl} for more information. For the details of the original algorithm Monte Carlo Localization (MCL), read Chapter 8 of \textit{Probabilistic Robotics} \cite{thrun2005probabilistic}.\\
+
+\noindent We now summarize several issues that may affect the quality of AMCL localization\footnote{Added on April 8th, 2019. This investigation was done in May, 2017, yet not reported in this guide at the time.}.  We hope this information makes this guide more complete, and you find it useful.
+
+
+\begin{figure}[!tb]
+\minipage{0.49\textwidth}
+    \includegraphics[width=\linewidth]{scanner1.png}
+    \caption{When \texttt{LaserScan} fields are not correct}
+    \label{fig:scanner1}
+\endminipage\hfill
+\minipage{0.49\textwidth}
+  \includegraphics[width=\linewidth]{scanner2.png}
+  \caption{When \texttt{LaserScan} fields are correct}
+  \label{fig:scanner2}
+\endminipage\hfill
+\end{figure}
+
+Through experiments, we observed three issues that affect the localization with AMCL. As described in \cite{thrun2005probabilistic}, MCL maintains two probabilistic models, a \emph{motion model} and a \emph{measurement model}. In ROS \texttt{amcl}, the motion model corresponds to a model of the odometry, while the measurement model correspond to a model of laser scans. With this general understanding, we describe three issues separately as follows. 
+
+\subsection{Header in \texttt{LaserScan} messages}
+
+Messages that are published to \texttt{scan} topic are of type \texttt{sensor\_msgs/LaserScan}\footnote{See: \url{http://docs.ros.org/melodic/api/sensor_msgs/html/msg/LaserScan.html}}. This message contains a header with fields dependent on the specific laser scanner that you are using. These fields include (copied from the message documentation)
+
+\begin{itemize}
+\item \texttt{angle\_min} (float32) start angle of the scan [rad]
+\item \texttt{angle\_max} (float32) end angle of the scan [rad]
+\item \texttt{angle\_increment} (float32)  start angle of the scan [rad]
+\item \texttt{time\_increment} (float32) time between measurements [seconds] - if your scanner is moving, this will be used in interpolating position of 3d points
+\item \texttt{scan\_time} (float32) time between scans [seconds]
+\item \texttt{range\_min} (float32) minimum range value [m]
+\item \texttt{range\_max} (float32) maximum range value [m]
+\end{itemize}
+
+We observed in our experiments that if these values are not set correctly for the laser scanner product on board, the quality of localization will be affected (see Figure~\ref{fig:scanner1} and \ref{fig:scanner2}. We have used two laser scanners products, the SICK LMS 200 and the SICK LMS 291. We provide their parameters below\footnote{For LMS 200, thanks to {this Github issue} (\url{https://github.com/smichaud/lidar-snowfall/issues/1})}.
+
+\noindent SICK LMS 200:
+\lstset{language=json}
+\begin{lstlisting}
+{   
+    "range_min": 0.0,
+    "range_max": 81.0,
+    "angle_min": -1.57079637051,
+    "angle_max": 1.57079637051,
+    "angle_increment": 0.0174532923847,
+    "time_increment": 3.70370362361e-05,
+    "scan_time": 0.0133333336562
+}
+\end{lstlisting}
+
+\noindent SICK LMS 291:
+\lstset{language=json}
+\begin{lstlisting}
+{   
+    "range_min": 0.0,
+    "range_max": 81.0,
+    "angle_min": -1.57079637051,
+    "angle_max": 1.57079637051,
+    "angle_increment": 0.00872664619235,
+    "time_increment": 7.40740724722e-05,
+    "scan_time": 0.0133333336562
+}
+\end{lstlisting}
+
+
+\subsection{Parameters for measurement and motion models}
+There are parameters listed in the \texttt{amcl} package about tuning the laser scanner model (measurement)  and odometry model (motion). Refer to the package page for the complete list and their definitions. A detailed discussion requires great understanding of the MCL algorithm in \cite{thrun2005probabilistic}, which we omit here. We provide an \emph{example} of fine tuning these parameters and describe their results qualitatively. The actual parameters you use should depend on your laser scanner and robot.
+
+For \textbf{laser scanner model}, the default parameters are:
+
+\lstset{language=json}
+\begin{lstlisting}
+{
+    "laser_z_hit": 0.5,
+    "laser_sigma_hit": 0.2,
+    "laser_z_rand" :0.5,
+    "laser_likelihood_max_dist": 2.0
+}
+\end{lstlisting}
+
+To improve the localization of our robot, we increased \texttt{laser\_z\_hit} and \texttt{laser\_sigma\_hit} to incorporate higher measurement noise. The resulting parameters are:
+
+\lstset{language=json}
+\begin{lstlisting}
+{
+    "laser_z_hit": 0.9,
+    "laser_sigma_hit": 0.1,
+    "laser_z_rand" :0.5,
+    "laser_likelihood_max_dist": 4.0
+}
+\end{lstlisting}
+The behavior is illustrated in Figure~\ref{fig:param1} and \ref{fig:param2}. It is clear that in our case, adding noise into the measurement model helped with localization.
+
+
+\begin{figure}[!tb]
+\minipage{0.49\textwidth}
+    \includegraphics[width=\linewidth]{param1.png}
+    \caption{Default measurement model parameters}
+    \label{fig:param1}
+\endminipage\hfill
+\minipage{0.49\textwidth}
+  \includegraphics[width=\linewidth]{param2.png}
+  \caption{After tuning measurement model parameters (increase noise)}
+  \label{fig:param2}
+\endminipage\hfill
+\end{figure}
+
+
+
+For the \textbf{odometry model}, we found that our odometry was quite reliable in terms of stability. Therefore, we tuned the parameters so that the algorithm assumes there is low noise in odometry:
+\lstset{language=json}
+\begin{lstlisting}
+{   
+    "kld_err": 0.01,
+    "kld_z": 0.99,
+    "odom_alpha1": 0.005,
+    "odom_alpha2": 0.005,
+    "odom_alpha3": 0.005,
+    "odom_alpha4": 0.005
+}
+\end{lstlisting}
+To verify that the above paremeters for motion model work, we also tried a set of parameters that suggest a noisy odometry model:
+\lstset{language=json}
+\begin{lstlisting}
+{
+    "kld_err": 0.10,
+    "kld_z": 0.5',                                                                            
+    "odom_alpha1": 0.008,                                                                     
+    "odom_alpha2": 0.040,                                                                     
+    "odom_alpha3": 0.004,                                                                     
+    "odom_alpha4": 0.025                                                                      
+} 
+\end{lstlisting}
+We observed that when the odometry model is less noisy, the particles are more condensed. Otherwise, the particles are more spread-out.
+
+\subsection{Translation of the laser scanner}
+
+There is a \texttt{tf} transform from \texttt{laser\_link} to \texttt{base\_footprint} or \texttt{base\_link} that indicates the pose of the laser scanner with respect to the robot base. If this transform is not correct, it is very likely that the localization behaves strangely. In this situation, we have observed constant shifting of laser readings from the walls of the environment, and sudden drastic change in the localization. It is straightforward enough to make sure the transform is correct; This is usually handled in \texttt{urdf} and \texttt{srdf} specification of your robot. However, if you are using a \texttt{rosbag} file, you may have to publish the transform youself.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Recovery Behaviors}
@@ -484,8 +666,7 @@ rotating 360 degrees in place.
 
 \paragraph{Unstuck the robot} Sometimes rotate recovery will fail to execute due to rotation failure. At this point, the robot may just give up because it has tried
 all of its recovery behaviors - clear costmap and rotation. In most experiments we observed that when the robot gives up, there are actually many ways to unstuck the robot.
-To avoid giving up, we used SMACH to continuously try different recovery behaviors, with additional ones such as setting a temporary goal that is very close to the robot. Methods
-like this usually turn out to work pretty well.
+To avoid giving up, we used SMACH to continuously try different recovery behaviors, with additional ones such as setting a temporary goal that is very close to the robot, and returning to some previously visited pose (i.e. backing off). These methods turn out to improve the robot's durability substantially, and unstuck it from previously hopeless tight spaces from our experiment observations\footnote{Here is a video demo of my work on mobile robot navigation: \url{https://youtu.be/1-7GNtR6gVk}}.
 
 \begin{figure}[!h]
     \begin{center}
@@ -533,6 +714,14 @@ Robots using ROS navigation stack can exhibit inconsistent behaviors, for exampl
 
 \section*{Thanks}
 
-Hope this guide is helpful. There will be more information added for local planners besides DWA Local planner, as well as for AMCL parameter tuning. Please feel free to add more.
+Hope this guide is helpful. Please feel free to add more information from your own experimental observations.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% References
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\nocite{*}
+\bibliographystyle{apalike}
+\bibliography{main}
+
 
 \end{document}

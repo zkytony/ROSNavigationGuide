@@ -1,0 +1,10 @@
+__MACOSX
+auto
+*.aux
+*.out
+*.bbl
+*.blg
+*.fdb_latexmk
+*.log
+*.synctex.gz
+root.pdf

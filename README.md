@@ -6,6 +6,17 @@ different components in ROS navigation stack and how to tune them well. It is al
 
 Feel free to open issues about mistakes, or contribute directly by sending pull requests.
 
+Citation
+```
+@misc{zheng2016ros,
+  author       = {Kaiyu Zheng}, 
+  title        = {ROS Navigation Tuning Guide},
+  howpublished = {http://kaiyuzheng.me/documents/papers/ros_navguide.pdf},
+  month        = 9,
+  year         = 2016
+}
+```
+
 Contributor:
 
-- Kaiyu Zheng
+- [Kaiyu Zheng](http://kaiyuzh.me)

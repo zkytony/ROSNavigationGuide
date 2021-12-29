@@ -8,12 +8,16 @@ Feel free to open issues about mistakes, or contribute directly by sending pull 
 
 Citation
 ```
-@misc{zheng2016ros,
-  author       = {Kaiyu Zheng}, 
-  title        = {ROS Navigation Tuning Guide},
-  howpublished = {http://kaiyuzheng.me/documents/papers/ros_navguide.pdf},
-  month        = 9,
-  year         = 2016
+@incollection{zheng-ros-navguide,
+  author      = "Kaiyu Zheng",
+  title       = "ROS Navigation Tuning Guide",
+  editor      = "Anis Koubaa",
+  booktitle   = "Robot Operating System (ROS)",
+  subtitle    = "The Complete Reference (Volume 6)",
+  publisher   = "Springer International Publishing",
+  year        = 2021,
+  pages       = "197-226",
+  chapter     = 6,
 }
 ```
 
